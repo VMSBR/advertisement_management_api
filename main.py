@@ -47,6 +47,7 @@ def post_adverts(
     title: Annotated[str, Form()],
     description: Annotated[str, Form()],
     price: Annotated[float, Form()],
+    category: Annotated[str, Form()],
     quantity: Annotated[int, Form()],
     flyer: Annotated[UploadFile, File()],
 ):
@@ -57,6 +58,7 @@ def post_adverts(
             "title": title,
             "description": description,
             "price": price,
+            "category": category,
             "quantity": quantity,
             "flyer": upload_result["secure_url"],
         }
@@ -103,6 +105,7 @@ def replace_advert(
     title: Annotated[str, Form()],
     description: Annotated[str, Form()],
     price: Annotated[float, Form()],
+    category: Annotated[float, Form()],
     quantity: Annotated[int, Form()],
     flyer: Annotated[UploadFile, File()],
 ):
@@ -120,6 +123,7 @@ def replace_advert(
             "title": title,
             "description": description,
             "price": price,
+            "category": category,
             "quantity": quantity,
             "flyer": upload_result["secure_url"],
         },
