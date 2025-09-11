@@ -6,13 +6,18 @@ from utils import replace_mongo_id
 from typing import Annotated
 import cloudinary
 import cloudinary.uploader
+import os
+from dotenv import load_dotenv
 
-# Configure cloudinary
+load_dotenv()
+
+# configure cloudinary
 cloudinary.config(
-    cloud_name="dh642puxk",
-    api_key="413358591893165",
-    api_secret="-irAwuqqrhNgOXz-A_wKUoKz9pU",
+    cloud_name = os.getenv("CLOUD_NAME"),
+    api_key = os.getenv("API_KEY"),
+    api_secret = os.getenv("API_SECRET"),
 )
+    
 
 tags_metadata = [
     {
@@ -84,7 +89,6 @@ def get_adverts(title="", description="", limit=10, skip=0):
     # Return response
     return {"data": list(map(replace_mongo_id, adverts))}
 
-
 # Get advert by advert details
 @app.get("/adverts/{advert_id}", tags=["Adverts"])
 def get_advert_by_id(advert_id):
@@ -105,7 +109,7 @@ def replace_advert(
     title: Annotated[str, Form()],
     description: Annotated[str, Form()],
     price: Annotated[float, Form()],
-    category: Annotated[float, Form()],
+    category: Annotated[str, Form()],
     quantity: Annotated[int, Form()],
     flyer: Annotated[UploadFile, File()],
 ):
