@@ -12,5 +12,5 @@ mongo_client = MongoClient(os.getenv("MONGO_URI"))
 advertisement_manager_db = mongo_client["advertisement_manager_db"]
 
 # Pick a connection to operate on
-vendors_collection = advertisement_manager_db["vendors"]
+users_collection = advertisement_manager_db["vendors"]
 adverts_collection = advertisement_manager_db["adverts"]
