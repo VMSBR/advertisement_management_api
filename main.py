@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import cloudinary
 import os
 from dotenv import load_dotenv
-from route.ai_feature import ai_router
+
 
 load_dotenv()
 
@@ -52,4 +52,3 @@ app.include_router(adverts_router)
 
 app.include_router(users_router)
 
-app.include_router(ai_router)

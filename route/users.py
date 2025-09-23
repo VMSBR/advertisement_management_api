@@ -9,9 +9,9 @@ import os
 from datetime import datetime, timezone, timedelta
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    HOST = "vendor"
-    GUEST = "customer"
+    ADMIN = "Admin"
+    HOST = "Vendor"
+    GUEST = "User"
 
 # Create users router
 users_router = APIRouter()
