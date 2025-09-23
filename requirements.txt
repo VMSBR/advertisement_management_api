@@ -5,4 +5,5 @@ python-multipart
 cloudinary
 bcrypt
 pyjwt
-openai
+huggingface_hub 
+Pillow
