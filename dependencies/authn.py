@@ -17,15 +17,17 @@ def is_authenticated(
             key=os.getenv("JWT_SECRET_KEY"),
             algorithms=["HS256"],
         )
-        return payload
+        print(payload)
+        return payload["id"]
     except jwt.InvalidTokenError as e:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
 
-def authenticated_user(payload: dict = Depends(is_authenticated)):
-    user = users_collection.find_one({"_id": ObjectId(payload["id"])})
+def authenticated_user(user_id: Annotated[str, Depends(is_authenticated)]):
+    user = users_collection.find_one(filter={"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, "Authenticated user missing from database!"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated user missing from database!",
         )
     return replace_mongo_id(user)
