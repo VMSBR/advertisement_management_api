@@ -8,6 +8,7 @@ import cloudinary.uploader
 from dependencies.authn import is_authenticated
 from dependencies.authz import has_roles
 
+
 # Create adverts router
 adverts_router = APIRouter()
 
@@ -54,19 +55,45 @@ def post_adverts(
 
 # Get advert endpoint
 @adverts_router.get("/adverts", tags=["Adverts"])
-def get_adverts(title="", description="", limit=10, skip=0):
-    # Get all adverts from database
-    adverts = adverts_collection.find(
-        filter={
-            "$or": [
-                {"title": {"$regex": title, "$options": "i"}},
-                {"description": {"$regex": description, "$options": "i"}},
-            ]
-        },
+def get_adverts(
+    search: str | None = None,
+    category: str | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    limit: int = 10,
+    skip: int = 0
+):
+    # --- ADDITION: Dynamic query builder ---
+    query_filter = {}
+   
+    # Keyword search on title and description
+    if search:
+        query_filter["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+        ]
+       
+    # Filter by category (exact match, case-insensitive)
+    if category:
+        query_filter["category"] = {"$regex": f"^{category}$", "$options": "i"}
+       
+    # Filter by price range
+    price_filter = {}
+    if min_price is not None:
+        price_filter["$gte"] = min_price
+    if max_price is not None:
+        price_filter["$lte"] = max_price
+    if price_filter:
+        query_filter["price"] = price_filter
+    # --- END ADDITION ---
+
+    # Get all events from the database using the constructed filter
+    adverts = list(adverts_collection.find(
+        filter=query_filter,
         limit=int(limit),
         skip=int(skip),
-    ).to_list()
-    # Return response
+    ))
+   
     return {"data": list(map(replace_mongo_id, adverts))}
 
 # Get advert by advert details
