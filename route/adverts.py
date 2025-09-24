@@ -1,21 +1,20 @@
-from fastapi import Form, File, UploadFile, HTTPException, status, APIRouter, Depends
+from fastapi import Form, File, HTTPException, status, APIRouter, Depends
 from db import adverts_collection
 from bson.objectid import ObjectId
-from utils import replace_mongo_id
+from utils import replace_mongo_id, genai_client
 from typing import Annotated
 import cloudinary
 import cloudinary.uploader
 from dependencies.authn import is_authenticated
 from dependencies.authz import has_roles
-import os
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google.genai import types
+
 
 load_dotenv()
 
 # Create adverts router
 adverts_router = APIRouter()
-
 
 # Endpoints for Adding adverts
 @adverts_router.post(
@@ -25,19 +24,20 @@ adverts_router = APIRouter()
 )
 def post_adverts(
     title: Annotated[str, Form()],
+    description: Annotated[str, Form()],
     price: Annotated[float, Form()],
     category: Annotated[str, Form()],
     quantity: Annotated[int, Form()],
-    flyer: Annotated[UploadFile, File()],
     user_id: Annotated[str, Depends(is_authenticated)],
-    description: Annotated[str, Form()] = None,
+    flyer: Annotated[bytes, File()]=None,
 ):
-    if not description:
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(f"{title} description")
-
-    description = response.text
+    if not flyer:
+        response=genai_client.models.generate_images(
+            model = "imagen-4.0-generate-001",
+            prompt=title,
+            config=types.GenerateImagesConfig(number_of_images=1),
+        )
+        flyer =response.generated_images[0].image.image_bytes
 
     advert_count = adverts_collection.count_documents(
         filter={"$and": [{"title": title}, {"owner": user_id}]}
@@ -48,7 +48,7 @@ def post_adverts(
             f"Advert with {title} and {ObjectId(user_id)} already exist!",
         )
 
-    upload_result = cloudinary.uploader.upload(flyer.file)
+    upload_result = cloudinary.uploader.upload(flyer)
     # Insert advert into database
     adverts_collection.insert_one(
         {
@@ -158,7 +158,6 @@ def get_similar_adverts(advert_id, limit=10, skip=0):
 
     return {"data": list(map(replace_mongo_id, similar_adverts))}
 
-
 @adverts_router.put(
     "/adverts/{advert_id}",
     tags=["Vendor Dashboard"],
@@ -166,20 +165,21 @@ def get_similar_adverts(advert_id, limit=10, skip=0):
 )
 def replace_advert(
     advert_id: str,
+    description: Annotated[str, Form()],
     title: Annotated[str, Form()],
     price: Annotated[float, Form()],
     category: Annotated[str, Form()],
     quantity: Annotated[int, Form()],
-    flyer: Annotated[UploadFile, File()],
     user_id: Annotated[str, Depends(is_authenticated)],
-    description: Annotated[str, Form()] = None,
+    flyer: Annotated[bytes, File()]=None,
 ):
-    if not description:
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(f"{title} description")
-
-    description = response.text
+    if not flyer:
+        response=genai_client.models.generate_images(
+            model = "imagen-4.0-generate-001",
+            prompt=title,
+            config=types.GenerateImagesConfig(number_of_images=1),
+        )
+        flyer =response.generated_images[0].image.image_bytes
 
     if not adverts_collection.find_one({"_id": ObjectId(advert_id)}):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No advert found to replace!")
@@ -189,7 +189,7 @@ def replace_advert(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid mongo id received!"
         )
     # upload flyer to cloudinary to get a url
-    upload_result = cloudinary.uploader.upload(flyer.file)
+    upload_result = cloudinary.uploader.upload(flyer)
     # replace advert in database
     replace_result = adverts_collection.replace_one(
         filter={"_id": ObjectId(advert_id), "owner": user_id},
