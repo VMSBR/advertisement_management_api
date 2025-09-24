@@ -12,13 +12,16 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 load_dotenv()
+
 # Create adverts router
 adverts_router = APIRouter()
 
 
 # Endpoints for Adding adverts
 @adverts_router.post(
-    "/adverts", tags=["Vendor Dashboard"], dependencies=[Depends(has_roles(["Vendor", "Admin"]))]
+    "/adverts",
+    tags=["Vendor Dashboard"],
+    dependencies=[Depends(has_roles(["vendor", "admin"]))],
 )
 def post_adverts(
     title: Annotated[str, Form()],
@@ -27,15 +30,15 @@ def post_adverts(
     quantity: Annotated[int, Form()],
     flyer: Annotated[UploadFile, File()],
     user_id: Annotated[str, Depends(is_authenticated)],
-    description: Annotated[str, Form()]=None,
+    description: Annotated[str, Form()] = None,
 ):
     if not description:
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
         response = model.generate_content(f"{title} description")
 
-    description=response.text
-    
+    description = response.text
+
     advert_count = adverts_collection.count_documents(
         filter={"$and": [{"title": title}, {"owner": user_id}]}
     )
@@ -44,7 +47,7 @@ def post_adverts(
             status.HTTP_409_CONFLICT,
             f"Advert with {title} and {ObjectId(user_id)} already exist!",
         )
-    
+
     upload_result = cloudinary.uploader.upload(flyer.file)
     # Insert advert into database
     adverts_collection.insert_one(
@@ -74,15 +77,14 @@ def get_adverts(
 ):
     # Query
     query_filter = {}
-  
+
     # Keyword search on title and description
     if search:
         query_filter["$or"] = [
             {"title": {"$regex": search, "$options": "i"}},
             {"description": {"$regex": search, "$options": "i"}},
         ]
-
-    # Filter by category 
+    # Filter by category
     if category:
         query_filter["category"] = {"$regex": f"^{category}$", "$options": "i"}
 
@@ -119,13 +121,14 @@ def get_advert_by_id(advert_id):
     # Return response
     return {"data": replace_mongo_id(advert)}
 
+
 @adverts_router.get("/advert/{advert_id}/similar", tags=["User Dashboard"])
 def get_similar_adverts(advert_id, limit=10, skip=0):
     if not ObjectId.is_valid(advert_id):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid mongo id received!"
         )
-    
+
     advert = adverts_collection.find_one({"_id": ObjectId(advert_id)})
     if not advert:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Advert not found!")
@@ -155,14 +158,11 @@ def get_similar_adverts(advert_id, limit=10, skip=0):
 
     return {"data": list(map(replace_mongo_id, similar_adverts))}
 
-    
-
-
 
 @adverts_router.put(
     "/adverts/{advert_id}",
     tags=["Vendor Dashboard"],
-    dependencies=[Depends(has_roles(["Vendor", "Admin"]))],
+    dependencies=[Depends(has_roles(["vendor", "admin"]))],
 )
 def replace_advert(
     advert_id: str,
@@ -172,14 +172,14 @@ def replace_advert(
     quantity: Annotated[int, Form()],
     flyer: Annotated[UploadFile, File()],
     user_id: Annotated[str, Depends(is_authenticated)],
-    description: Annotated[str, Form()]=None,
+    description: Annotated[str, Form()] = None,
 ):
     if not description:
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
         response = model.generate_content(f"{title} description")
 
-    description=response.text
+    description = response.text
 
     if not adverts_collection.find_one({"_id": ObjectId(advert_id)}):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No advert found to replace!")
@@ -212,7 +212,7 @@ def replace_advert(
 @adverts_router.delete(
     "/adverts/{advert_id}",
     tags=["Vendor Dashboard"],
-    dependencies=[Depends(has_roles(["Vendor", "Admin"]))],
+    dependencies=[Depends(has_roles(["vendor", "admin"]))],
 )
 def delete_advert(advert_id, user_id: Annotated[str, Depends(is_authenticated)]):
     # Check if advert_id is a valid mongo id
@@ -230,19 +230,15 @@ def delete_advert(advert_id, user_id: Annotated[str, Depends(is_authenticated)])
     return {"message": "Advert deleted succesfully!", "user_id": user_id}
 
 
-# In adverts.py
-
-
 @adverts_router.get(
     "/adverts/user/me",
     tags=["Vendor Dashboard"],
-    dependencies=[Depends(has_roles(["Vendor", "Admin"]))],
+    dependencies=[Depends(has_roles(["vendor", "admin"]))],
 )
 def get_my_adverts(current_user_id: Annotated[str, Depends(is_authenticated)]):
     # Use the user ID string directly in the database query.
-    adverts_cursor = adverts_collection.find(filter={"owner": current_user_id})
-
-    adverts_list = list(adverts_cursor)
-
-    # Return response, ensuring MongoDB's _id is handled if necessary
+    adverts_query = adverts_collection.find(filter={"owner": current_user_id})
+    # Create list
+    adverts_list = list(adverts_query)
+    # Return response
     return {"data": list(map(replace_mongo_id, adverts_list))}
