@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile
 from route.adverts import adverts_router
 from route.users import users_router
+from route.genai import genai_router
 from pydantic import BaseModel
 import cloudinary
 import os
@@ -52,3 +53,4 @@ app.include_router(adverts_router)
 
 app.include_router(users_router)
 
+app.include_router(genai_router)
