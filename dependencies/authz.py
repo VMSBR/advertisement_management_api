@@ -9,5 +9,4 @@ def has_roles(roles):
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, "Access denied!"
             )
-
     return check_roles
