@@ -27,6 +27,9 @@ def register_user(
     password: Annotated[str, Form(min_length=8)],
     role: Annotated[UserRole, Form()] = UserRole.GUEST,
 ):
+    # Preventing people from registering directly as admin
+    if role == UserRole.ADMIN:
+        raise HTTPException(status. HTTP_400_BAD_REQUEST, "Cannot register as admin! Admin role is assigned manually, Please select a different role.")
     # Ensure user does not exist
     user_count = users_collection.count_documents(filter={"email": email})
     if user_count > 0:
