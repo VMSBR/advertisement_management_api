@@ -29,7 +29,10 @@ def register_user(
 ):
     # Preventing people from registering directly as admin
     if role == UserRole.ADMIN:
-        raise HTTPException(status. HTTP_400_BAD_REQUEST, "Cannot register as admin! Admin role is assigned manually, Please select a different role.")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot register as admin! Admin role is assigned manually, Please select a different role.",
+        )
     # Ensure user does not exist
     user_count = users_collection.count_documents(filter={"email": email})
     if user_count > 0:
@@ -81,5 +84,8 @@ def login_user(
         "HS256",
     )
     # Return a success response
-    return {"message": "User logged in successfully!", 
-            "access_token": encoded_jwt}
+    return {
+        "message": "User logged in successfully!",
+        "access_token": encoded_jwt,
+        "role": user_in_db["role"],
+    }
